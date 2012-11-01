@@ -1,9 +1,9 @@
 ! Parallel Game of Life
 ! Usage:
-!  mpirun -np 4 ./life conway-900x900.pgm -blockrow -niter=10000 -count=1000
-!  mpirun -np 6 ./life conway-900x900.pgm -blockcol -niter=5000 -count=1000
-!  mpirun -np 9 ./life conway-900x900.pgm -checker -niter=5000 -count=1000
+!  mpirun -np 4 ./life conway-900x900.pgm -blockrow
+!  mpirun -np 6 ./life conway-900x900.pgm -blockcol
 !  mpirun -np 9 ./life conway-900x900.pgm -checker -verbose
+!  mpirun -np 9 ./life conway-900x900.pgm -checker -niter=5000 -count=100
 !  mpirun -np 9 ./life conway-900x900.pgm -checker -io=1 -niter=10 -verbose
 
 program life
@@ -134,7 +134,6 @@ program life
       call parallel_io(outfile)
    end if
 
-   stop 'CHECKPOINT'
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    ! Timestepping
@@ -412,11 +411,11 @@ contains
       distribs=(/ MPI_DISTRIBUTE_BLOCK, MPI_DISTRIBUTE_BLOCK /)
       dargs=(/ MPI_DISTRIBUTE_DFLT_DARG, MPI_DISTRIBUTE_DFLT_DARG /)
       psizes=(/ nrows, ncols /)
-      call MPI_Type_Create_darray(np, myrank, 2, gsizes, distribs, dargs, psizes, MPI_ORDER_FORTRAN, MPI_INTEGER1, filetype, ierr)
+      call MPI_Type_Create_darray(np, myrank, 2, gsizes, distribs, dargs, psizes, MPI_ORDER_C, MPI_INTEGER1, filetype, ierr)
       call MPI_Type_Commit(filetype, ierr)
 
       ! set view to filetype darray
-      disp=myrank*local_height*local_width*1 ! one-byte ints
+      disp=0
       call MPI_FILE_SET_VIEW(lun, disp, MPI_INTEGER1, filetype, 'native', MPI_INFO_NULL, ierr) 
 
       ! write to file
@@ -429,7 +428,7 @@ contains
       end do
 
       ! call MPI_FILE_WRITE(lun, mygrid(1:local_height,1:local_width), buffsize, MPI_INTEGER1, MPI_STATUS_IGNORE, ierr) 
-      call MPI_FILE_WRITE(lun, buff, buffsize, MPI_INTEGER1, MPI_STATUS_IGNORE, ierr) 
+      call MPI_FILE_WRITE_ALL(lun, buff, buffsize, MPI_INTEGER1, MPI_STATUS_IGNORE, ierr) 
 
       ! close file
       call MPI_FILE_CLOSE(lun, ierr) 
